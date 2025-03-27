@@ -20,7 +20,7 @@ flutter:
   uses-material-design: true
 
   assets:
-     - assets/icons/ # Asegúrate de que esta carpeta existe y contiene las fuentes
+    - assets/icons/
 
   fonts:
     - family: Marmelad
