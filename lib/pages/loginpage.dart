@@ -1,7 +1,88 @@
 import 'package:flutter/material.dart';
+import '../controllers/login_controller.dart';
+import './home_page.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final LoginController _loginController = LoginController();
+  bool _rememberMe = false;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final username = _usernameController.text;
+    final password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      _showErrorDialog('Por favor, completa todos los campos');
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final success = await _loginController.login(username, password);
+      
+      if (success) {
+        // Navegamos a la página de inicio si el login es exitoso
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage(username: username)),
+          );
+        }
+      } else {
+        if (mounted) {
+          _showErrorDialog('Credenciales incorrectas' + success.toString());
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('Error de conexión');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,13 +98,26 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 20),
               const _Header(),
               const SizedBox(height: 40),
-              const _LoginForm(),
+              _LoginForm(
+                usernameController: _usernameController,
+                passwordController: _passwordController,
+                rememberMe: _rememberMe,
+                onRememberMeChanged: (value) {
+                  setState(() {
+                    _rememberMe = value ?? false;
+                  });
+                },
+                onLogin: _handleLogin,
+                isLoading: _isLoading,
+              ),
               const SizedBox(height: 20),
               const _Divider(),
               const SizedBox(height: 20),
               _CustomButton(
                 text: 'Regístrate',
-                onPressed: () {},
+                onPressed: () {
+                  // Aquí puedes implementar la navegación a la página de registro
+                },
                 isOutlined: true,
               ),
             ],
@@ -64,30 +158,66 @@ class _Header extends StatelessWidget {
 }
 
 class _LoginForm extends StatelessWidget {
-  const _LoginForm();
+  final TextEditingController usernameController;
+  final TextEditingController passwordController;
+  final bool rememberMe;
+  final Function(bool?) onRememberMeChanged;
+  final VoidCallback onLogin;
+  final bool isLoading;
+
+  const _LoginForm({
+    required this.usernameController,
+    required this.passwordController,
+    required this.rememberMe,
+    required this.onRememberMeChanged,
+    required this.onLogin,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _CustomTextField(hintText: 'Usuario', icon: Icons.person_outline),
-        const SizedBox(height: 20),
-        _CustomTextField(hintText: 'Contraseña', icon: Icons.lock_outline, isPassword: true),
-        const SizedBox(height: 10),
-        _RememberMeAndForgotPassword(),
-        const SizedBox(height: 10),
-        _CustomButton(
-          text: 'Iniciar sesión',
-          onPressed: () {},
-          isOutlined: false,
+        _CustomTextField(
+          hintText: 'Usuario',
+          icon: Icons.person_outline,
+          controller: usernameController,
         ),
+        const SizedBox(height: 20),
+        _CustomTextField(
+          hintText: 'Contraseña',
+          icon: Icons.lock_outline,
+          isPassword: true,
+          controller: passwordController,
+        ),
+        const SizedBox(height: 10),
+        _RememberMeAndForgotPassword(
+          rememberMe: rememberMe,
+          onRememberMeChanged: onRememberMeChanged,
+        ),
+        const SizedBox(height: 10),
+        isLoading
+            ? const CircularProgressIndicator(
+                color: Color.fromARGB(255, 39, 107, 225),
+              )
+            : _CustomButton(
+                text: 'Iniciar sesión',
+                onPressed: onLogin,
+                isOutlined: false,
+              ),
       ],
     );
   }
 }
 
 class _RememberMeAndForgotPassword extends StatelessWidget {
-  const _RememberMeAndForgotPassword();
+  final bool rememberMe;
+  final Function(bool?) onRememberMeChanged;
+
+  const _RememberMeAndForgotPassword({
+    required this.rememberMe,
+    required this.onRememberMeChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -96,12 +226,18 @@ class _RememberMeAndForgotPassword extends StatelessWidget {
       children: [
         Row(
           children: [
-            Checkbox(value: false, onChanged: (bool? newValue) {}),
+            Checkbox(
+              value: rememberMe,
+              onChanged: onRememberMeChanged,
+              activeColor: const Color.fromARGB(255, 39, 107, 225),
+            ),
             const Text("Recuérdame", style: TextStyle(fontSize: 14)),
           ],
         ),
         TextButton(
-          onPressed: () {},
+          onPressed: () {
+            // Aquí puedes implementar la navegación a la página de recuperación de contraseña
+          },
           child: const Text(
             'Recuperar Contraseña',
             style: TextStyle(color: Color.fromARGB(255, 39, 107, 225), fontWeight: FontWeight.bold),
@@ -116,12 +252,19 @@ class _CustomTextField extends StatelessWidget {
   final String hintText;
   final IconData icon;
   final bool isPassword;
+  final TextEditingController controller;
 
-  const _CustomTextField({required this.hintText, required this.icon, this.isPassword = false});
+  const _CustomTextField({
+    required this.hintText,
+    required this.icon,
+    this.isPassword = false,
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.blueGrey),
