@@ -38,9 +38,20 @@ jobs:
         run: zip -r RunnerSimulatorBundle.zip Payload/
         working-directory: build/ios/iphonesimulator
 
-      # 8. Subir el archivo como artefacto para pruebas
-      - name: Upload App Bundle
-        uses: actions/upload-artifact@v4
+      # 8. Compilar el proyecto iOS como .ipa (opcional)
+      - name: Create IPA
+        run: |
+          mkdir Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -r FlutterIpaExport.ipa Payload/
+        working-directory: build/ios/iphoneos
+      
+      # 9. Crear o actualizar un Release en GitHub con artefactos
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: RunnerSimulatorBundle
-          path: build/ios/iphonesimulator/RunnerSimulatorBundle.zip
+          files: |
+            build/ios/iphonesimulator/RunnerSimulatorBundle.zip
+            build/ios/iphoneos/FlutterIpaExport.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
