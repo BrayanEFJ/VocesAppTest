@@ -1,57 +1,86 @@
-name: iOS-simulator-build
-
+name: iOS-build-workflow
 on:
   workflow_dispatch:
-
 jobs:
-  build-ios-simulator:
-    name: 🎉 iOS Simulator Build
+  build-ios:
+    name: 🎉 iOS Build
     runs-on: macos-latest
     steps:
       # 1. Checkout el código fuente
       - uses: actions/checkout@v3
-
+      
       # 2. Instalar Flutter en el canal estable
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           architecture: x64
-
-      # 3. Obtener las dependencias de Flutter
-      - run: flutter pub get
       
-      # 4. Actualizar repositorio de CocoaPods
-      - run: pod repo update
-        working-directory: ios
-
-      # 5. Compilar el proyecto iOS para simulador sin firma de código
-      - run: flutter build ios --simulator --no-codesign
-
-      # 6. Crear la estructura Payload para el archivo .zip
-      - run: mkdir Payload
-        working-directory: build/ios/iphonesimulator
-      - run: mv Runner.app Payload/
-        working-directory: build/ios/iphonesimulator
-      
-      # 7. Comprimir el bundle .app en un archivo .zip para Appetize.io
-      - name: Create App Bundle (.zip)
-        run: zip -r RunnerSimulatorBundle.zip Payload/
-        working-directory: build/ios/iphonesimulator
-
-      # 8. Compilar el proyecto iOS como .ipa (opcional)
-      - name: Create IPA
+      # 3. Configurar dependencias de Xcode y herramientas
+      - name: Instalar dependencias
         run: |
-          mkdir Payload
-          mv build/ios/iphoneos/Runner.app Payload/
-          zip -r FlutterIpaExport.ipa Payload/
-        working-directory: build/ios/iphoneos
+          flutter --version
+          flutter pub get
+          
+      # 4. Configurar CocoaPods
+      - name: Configurar CocoaPods
+        run: |
+          cd ios
+          pod repo update
+          pod install
       
-      # 9. Crear o actualizar un Release en GitHub con artefactos
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            build/ios/iphonesimulator/RunnerSimulatorBundle.zip
-            build/ios/iphoneos/FlutterIpaExport.ipa
+      # 5. Compilar para iOS en modo release sin firma
+      - name: Compilar para iOS
+        run: flutter build ios --release --no-codesign
+      
+      # 6. Crear estructura para Appetize.io
+      - name: Preparar estructura para Appetize
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+      
+      # 7. Crear archivo ZIP para Appetize.io
+      - name: Crear ZIP para Appetize
+        run: |
+          cd build/ios/iphoneos
+          zip -r AppetizeBundle.zip Payload
+      
+      # 8. Crear archivo IPA
+      - name: Crear IPA para distribución
+        run: |
+          cd build/ios/iphoneos
+          zip -r FlutterApp.ipa Payload
+      
+      # 9. Subir ambos archivos a la release
+      - name: Crear Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v1.0
+          release_name: Release v1.0
+          draft: false
+          prerelease: false
+      
+      # 10. Subir ZIP para Appetize.io
+      - name: Subir ZIP para Appetize
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/ios/iphoneos/AppetizeBundle.zip
+          asset_name: AppetizeBundle.zip
+          asset_content_type: application/zip
+      
+      # 11. Subir IPA para distribución
+      - name: Subir IPA
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/ios/iphoneos/FlutterApp.ipa
+          asset_name: FlutterApp.ipa
+          asset_content_type: application/octet-stream
