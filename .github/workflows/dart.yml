@@ -40,7 +40,7 @@ jobs:
 
       # 8. Subir el archivo como artefacto para pruebas
       - name: Upload App Bundle
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: RunnerSimulatorBundle
           path: build/ios/iphonesimulator/RunnerSimulatorBundle.zip
