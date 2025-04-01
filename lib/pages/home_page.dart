@@ -11,7 +11,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Inicio'),
-        backgroundColor: const Color.fromARGB(255, 39, 107, 225),
+        backgroundColor: Colors.white,
       ),
       body: Center(
         child: Column(
@@ -26,11 +26,35 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
+                  PageRouteBuilder(
+                    pageBuilder:
+                        (context, animation, secondaryAnimation) => LoginPage(),
+                    transitionsBuilder: (
+                      context,
+                      animation,
+                      secondaryAnimation,
+                      child,
+                    ) {
+                      const begin = Offset(1.0, 0.0); // Desde la derecha
+                      const end = Offset.zero; // Al centro
+                      const curve = Curves.slowMiddle;
+                      var tween = Tween(
+                        begin: begin,
+                        end: end,
+                      ).chain(CurveTween(curve: curve));
+                      var offsetAnimation = animation.drive(tween);
+
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 39, 107, 225),
+                backgroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
                   vertical: 15,
