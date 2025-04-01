@@ -1,11 +1,11 @@
-name: iOS-build-workflow
+name: iOS-simulator-build
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
-    name: 🎉 iOS Build
+  build-ios-simulator:
+    name: 🎉 iOS Simulator Build
     runs-on: macos-latest
     steps:
       # 1. Checkout el código fuente
@@ -24,31 +24,23 @@ jobs:
       - run: pod repo update
         working-directory: ios
 
-      # 5. Compilar el proyecto iOS en modo release sin firma de código
-      - run: flutter build ios --release --no-codesign
+      # 5. Compilar el proyecto iOS para simulador sin firma de código
+      - run: flutter build ios --simulator --no-codesign
 
-      # 6. Crear la estructura requerida para el archivo .zip
+      # 6. Crear la estructura Payload para el archivo .zip
       - run: mkdir Payload
-        working-directory: build/ios/iphoneos
+        working-directory: build/ios/iphonesimulator
       - run: mv Runner.app Payload/
-        working-directory: build/ios/iphoneos
-
-      # 7. Comprimir el bundle .app en un archivo .zip (Appetize.io)
+        working-directory: build/ios/iphonesimulator
+      
+      # 7. Comprimir el bundle .app en un archivo .zip para Appetize.io
       - name: Create App Bundle (.zip)
-        run: zip -r RunnerAppBundle.zip Payload/
-        working-directory: build/ios/iphoneos
+        run: zip -r RunnerSimulatorBundle.zip Payload/
+        working-directory: build/ios/iphonesimulator
 
-      # 8. Comprimir el .ipa para distribución
-      - name: Create IPA
-        run: zip -qq -r -9 FlutterIpaExport.ipa Payload
-        working-directory: build/ios/iphoneos
-
-      # 9. Subir los binarios como artefactos para releases
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      # 8. Subir el archivo como artefacto para pruebas
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v3
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/ios/iphoneos/RunnerAppBundle.zip # Archivo para Appetize
-          tag: v1.0
-          overwrite: true
-          body: "Build compatible con Appetize y distribución como IPA"
+          name: RunnerSimulatorBundle
+          path: build/ios/iphonesimulator/RunnerSimulatorBundle.zip
