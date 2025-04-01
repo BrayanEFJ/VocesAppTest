@@ -1,9 +1,9 @@
-name: iOS-build-workflow
+name: iOS-simulator-workflow
 on:
   workflow_dispatch:
 jobs:
-  build-ios:
-    name: 🎉 iOS Build
+  build-ios-simulator:
+    name: 🎉 iOS Simulator Build
     runs-on: macos-latest
     steps:
       # 1. Checkout el código fuente
@@ -26,24 +26,24 @@ jobs:
         run: |
           flutter clean
           flutter create --platforms=ios --org com.example .
-          
-      # 5. Compilar para iOS en modo release sin firma y sin CocoaPods
-      - name: Compilar para iOS
+      
+      # 5. Compilar para simulador iOS en modo release
+      - name: Compilar para simulador iOS
         run: |
-          flutter build ios --release --no-codesign
-          
+          flutter build ios --debug --simulator --no-codesign
+      
       # 6. Crear estructura para Appetize.io
       - name: Preparar estructura para Appetize
         run: |
-          cd build/ios/iphoneos
+          cd build/ios/iphonesimulator
           mkdir -p Payload
           cp -r Runner.app Payload/
       
       # 7. Crear archivo ZIP para Appetize.io
       - name: Crear ZIP para Appetize
         run: |
-          cd build/ios/iphoneos
-          zip -r AppetizeBundle.zip Payload
+          cd build/ios/iphonesimulator
+          zip -r AppetizeSimulatorBundle.zip Payload
       
       # 8. Crear Release y subir archivos
       - name: Crear Release y subir archivos
@@ -52,6 +52,6 @@ jobs:
           tag_name: v1.0
           name: Release v1.0
           files: |
-            build/ios/iphoneos/AppetizeBundle.zip
+            build/ios/iphonesimulator/AppetizeSimulatorBundle.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
